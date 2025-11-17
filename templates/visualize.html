@@ -1,0 +1,96 @@
+{% extends 'base.html' %}
+{% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='visualize.css') }}">
+
+<div class="viz-container">
+  <h1 class="viz-heading">👀📊📝 Let's Explore the EDA and Visualizations...</h1>
+  <p class="viz-intro">Here you can explore all the features of the Weather Disease Predictor.</p>
+
+  <!-- EDA Sections - Data Preview Tables -->
+  <div class="eda-section">
+    <h2 class="eda-heading">📊 Exploratory Data Analysis (EDA)</h2>
+    
+    <!-- Head Table -->
+    <div class="viz-section fade-in">
+      <h3>Head of Dataset (First 5 Rows)</h3>
+      <div class="table-container">
+        {% include 'head_table.html' %}
+      </div>
+      <hr class="viz-divider">
+    </div>
+
+    <!-- Tail Table -->
+    <div class="viz-section fade-in">
+      <h3>Tail of Dataset (Last 5 Rows)</h3>
+      <div class="table-container">
+        {% include 'tail_table.html' %}
+      </div>
+      <hr class="viz-divider">
+    </div>
+
+    <!-- Info Table -->
+    <div class="viz-section fade-in">
+      <h3>Dataset Information</h3>
+      <div class="info-container">
+        {% include 'info_table.html' %}
+      </div>
+      <hr class="viz-divider">
+    </div>
+
+    <!-- Describe Table -->
+    <div class="viz-section fade-in">
+      <h3>Statistical Description</h3>
+      <div class="table-container">
+        {% include 'describe_table.html' %}
+      </div>
+      <hr class="viz-divider">
+    </div>
+
+    <!-- IsNull Table -->
+    <div class="viz-section fade-in">
+      <h3>Missing Values Check</h3>
+      <div class="table-container">
+        {% include 'isnull_table.html' %}
+      </div>
+      <hr class="viz-divider">
+    </div>
+  </div>
+
+  <!-- Visualization Graphs Section -->
+  <div class="visualization-section">
+    <h2 class="eda-heading">📈 Data Visualizations</h2>
+    
+    {% set graphs = [
+    ('Climate Factor Distribution', 'climate_factors_distribution.html'),
+    ('Disease Prevalence By Temperature Range', 'Disease Prevalence by Temperature Range.html'),
+    ('Disease Rate by 10-year Age Group', 'Disease Rate by 10-Year Age Group.html'),
+    ('Disease Rate by Age Group And Gender', 'Disease Rates by Age Group and Gender.html'),
+    ('Weather Variables Vs Disease Type', 'Disease_3D_Scatter.html')
+  ] %}
+
+  {% for title, file in graphs %}
+  <div class="viz-section fade-in">
+    <h3>{{ title }}</h3>
+    <div style="text-align: center; padding: 40px; background: #1e1e1e; border-radius: 8px; border: 2px dashed #00d9ff;">
+      <iframe src="{{ url_for('static', filename=file) }}" width="100%" height="600px"></iframe>
+    </div>
+    
+    <hr class="viz-divider">
+  </div>
+  {% endfor %}
+  </div>
+</div>
+
+<br>
+
+<div class="footer-frame">
+  <div class="border-line top-line"></div>
+  <div class="border-line right-line"></div>
+  <div class="border-line bottom-line"></div>
+  <div class="border-line left-line"></div>
+
+  <footer>
+    <p>© 2025 Weather Disease Predictor | All Rights Reserved</p>
+  </footer>
+</div>
+{% endblock %}

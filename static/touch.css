@@ -1,0 +1,187 @@
+.touch-container {
+  padding: 40px;
+  font-family: "Segoe UI", sans-serif;
+  max-width: 800px;
+  margin: 0 auto;
+  text-align: center;
+  animation: fadeInUp 1s ease;
+  position: relative;
+  z-index: 1;
+}
+
+.touch-heading {
+  font-size: 36px;
+  font-weight: bold;
+  color: #00d9ff;
+  margin-bottom: 20px;
+  animation: pulseGlow 2s infinite;
+  text-shadow: 0 0 10px #00d9ff, 0 0 20px rgba(0, 217, 255, 0.5);
+}
+
+.touch-description {
+  font-size: 17px;
+  color: #ffffff;
+  line-height: 1.6;
+  animation: fadeIn 1.5s ease;
+}
+
+.touch-form {
+  display: flex;
+  flex-direction: column;
+  gap: 15px;
+  max-width: 500px;
+  margin: 30px auto;
+  animation: fadeInUp 1s ease;
+  position: relative;
+  z-index: 2;
+}
+
+.touch-form input,
+.touch-form select,
+.touch-form textarea {
+  padding: 12px;
+  font-size: 16px;
+  border: 2px solid #00d9ff;
+  border-radius: 8px;
+  background-color: #0b0f1d;
+  color: #ffffff;
+  transition: all 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
+}
+
+.touch-form input:focus,
+.touch-form select:focus,
+.touch-form textarea:focus {
+  outline: none;
+  border-color: #28a745;
+  box-shadow: 0 0 15px #28a745;
+  transform: scale(1.03);
+}
+
+.touch-form button {
+  padding: 12px;
+  font-size: 16px;
+  background: linear-gradient(90deg, #00d9ff, #8b5cf6);
+  color: #0b0f1d;
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: transform 0.3s ease, box-shadow 0.3s ease;
+  box-shadow: 0 0 10px rgba(0, 217, 255, 0.6);
+}
+
+.touch-form button:hover {
+  transform: scale(1.05);
+  box-shadow: 0 0 15px #28a745;
+}
+
+
+/* Looping glow animation */
+@keyframes pulseGlow {
+  0% { text-shadow: 0 0 10px #00d9ff, 0 0 20px rgba(0, 217, 255, 0.5); }
+  50% { text-shadow: 0 0 20px #8b5cf6, 0 0 30px rgba(139, 92, 246, 0.6); }
+  100% { text-shadow: 0 0 10px #00d9ff, 0 0 20px rgba(0, 217, 255, 0.5); }
+}
+
+/* Entry animations */
+@keyframes fadeIn {
+  from { opacity: 0; }
+  to { opacity: 1; }
+}
+
+@keyframes fadeInUp {
+  from { transform: translateY(20px); opacity: 0; }
+  to { transform: translateY(0); opacity: 1; }
+}
+
+/* footer */
+.footer-frame {
+  position: relative;
+  background: #0b0f1d;
+  color: #ccc;
+  text-align: center;
+  font-size: 0.9rem;
+  padding: 25px;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.footer-frame footer {
+  position: relative;
+  z-index: 1;
+}
+
+.border-line {
+  position: absolute;
+  background: #00d9ff;
+  z-index: 0;
+}
+
+.top-line {
+  height: 2px;
+  width: 100%;
+  top: 0;
+  left: -100%;
+  animation: slideRight 4s linear infinite;
+}
+
+
+.right-line {
+  width: 2px;
+  height: 100%;
+  top: 0;
+  right: 0;
+  background: #00d9ff;
+  animation: moveDown 4s linear infinite;
+  transform-origin: top;
+}
+
+.bottom-line {
+  height: 2px;
+  width: 100%;
+  bottom: 0;
+  right: -100%;
+  animation: slideLeft 4s linear infinite;
+  animation-delay: 2s;
+}
+
+
+.left-line {
+  width: 2px;
+  height: 100%;
+  bottom: -100%;
+  left: 0;
+  animation: slideUp 4s linear infinite;
+  animation-delay: 1s;
+}
+
+/* footer Animations */
+@keyframes slideRight {
+  0% { left: -100%; }
+  100% { left: 100%; }
+}
+
+@keyframes slideDown {
+  0% { top: -100%; }
+  100% { top: 100%; }
+}
+
+@keyframes slideLeft {
+  0% { right: -100%; }
+  100% { right: 100%; }
+}
+
+@keyframes slideUp {
+  0% { bottom: -100%; }
+  100% { bottom: 100%; }
+}
+
+@keyframes moveDown {
+  0% {
+    transform: translateY(-100%);
+  }
+  100% {
+    transform: translateY(100%);
+  }
+}

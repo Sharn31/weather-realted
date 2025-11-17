@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <title>Weather Disease Predictor</title>
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='bootstrap.min.css') }}"
+    />
+    <link
+      rel="stylesheet"
+      href="{{ url_for('static', filename='about.css') }}"
+    />
+    <style>
+      .navbar-nav {
+        margin-left: auto;
+      }
+      .navbar-brand {
+        margin-left: 30px;
+        color: #00d9ff;
+        font-weight: bold;
+        text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+        animation: glow 2s ease-in-out infinite alternate;
+      }
+      
+      @keyframes glow {
+        from {
+          text-shadow: 0 0 10px rgba(0, 217, 255, 0.5), 0 0 20px rgba(0, 217, 255, 0.3);
+        }
+        to {
+          text-shadow: 0 0 20px rgba(0, 217, 255, 0.8), 0 0 30px rgba(0, 217, 255, 0.5), 0 0 40px rgba(139, 92, 246, 0.3);
+        }
+      }
+      
+      .navbar ul{
+        margin-right: 20px;
+      }
+
+      .nav-item .nav-link {
+        position: relative;
+      }
+
+      .nav-item .nav-link::after {
+        content: "";
+        position: absolute;
+        left: 0;
+        bottom: 0;
+        width: 0%;
+        height: 2px;
+        background: linear-gradient(90deg, #00d9ff, #8b5cf6);
+        transition: width 0.3s ease-in-out;
+      }
+
+      .nav-item .nav-link:hover::after {
+        width: 100%;
+      }
+
+      .nav-item .nav-link:hover {
+        color: #00d9ff;
+        text-shadow: 0 0 8px rgba(0, 217, 255, 0.6);
+      }
+    </style>
+  </head>
+  <body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-dark sticky-top">
+      <div class="container-fluid">
+        <a class="navbar-brand" href="#">Weather Disease Predictor</a>
+        <button
+          class="navbar-toggler"
+          type="button"
+          data-bs-toggle="collapse"
+          data-bs-target="#navbarNav"
+        >
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbarNav">
+          <ul class="navbar-nav ms-auto">
+            <li class="nav-item">
+              <a
+                class="nav-link active"
+                aria-current="page"
+                href="{{ url_for('about') }}"
+                >About</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{ url_for('visualize') }}"
+                >Visualization</a
+              >
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('model_page')}}">Model Prediction</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="{{url_for('touch')}}">Get In Touch</a>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </nav>
+
+    <div class="container mt-4">{% block content %}{% endblock %}</div>
+
+  <script src="{{ url_for('static', filename='js/bootstrap.bundle.min.js') }}"></script>
+  </body>
+</html>

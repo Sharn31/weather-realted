@@ -1,0 +1,94 @@
+{% extends "base.html" %} {% block content %}
+<section class="hero">
+  <video autoplay muted loop playsinline id="heroVideo">
+    <source
+      src="https://cdn.pixabay.com/video/2025/07/07/290011_large.mp4"
+      type="video/mp4"
+    />
+    Your browser does not support the video tag.
+  </video>
+  <div class="overlay"></div>
+  <div class="hero-content">
+    <h1>ABOUT THE WEATHER DISEASE PREDICTOR</h1>
+    <p>
+      Exploring how climate shapes disease patterns Harnessing data to predict
+      future outbreaks Advancing global health and sustainability.
+    </p>
+  </div>
+</section>
+
+<!-- Introduction Section -->
+<section class="intro container">
+  <div class="intro-content">
+    <div class="text">
+      <h2>What Is Our Project About?</h2>
+      <p>
+        Our project aims to predict and analyze how climatic factors such as
+        temperature, humidity, and rainfall contribute to the spread of
+        infectious diseases. By combining machine learning with environmental
+        data, we strive to identify early warning signs that can help reduce
+        health risks and improve sustainability.
+      </p>
+    </div>
+    <div class="image">
+      <img
+        src="https://plus.unsplash.com/premium_photo-1661573311248-8b57f889f4a7?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxzZWFyY2h8MTN8fGNsaW1hdGUlMjBjaGFuZ2UlMjBkaXNlYXNlJTIwdHJhbnNtaXNzaW9ufGVufDB8fDB8fHww&auto=format&fit=crop&q=60&w=600"
+        alt="Climate research image"
+      />
+    </div>
+  </div>
+</section>
+
+<!-- Why We Chose This Project -->
+<section class="why container">
+  <h2>Why We Chose This Project</h2>
+  <p>
+    Climate change is one of the most pressing challenges of our time. It not
+    only affects ecosystems and economies but also human health. Rising global
+    temperatures and changing weather patterns have led to the emergence and
+    spread of new diseases. Our mission is to leverage technology to analyze and
+    forecast these risks.
+  </p>
+</section>
+
+<!-- SDG Section -->
+<section class="sdg container">
+  <h2>Contributing to Global Sustainable Development</h2>
+  <div class="sdg-grid">
+    <div class="sdg-card">
+      <img
+        src="https://plus.unsplash.com/premium_photo-1661598940278-70e809028cc6?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1169"
+        alt="SDG 3 - Health"
+      />
+      <h3>SDG 3: Good Health & Well-Being</h3>
+      <p>
+        We focus on improving health outcomes by preventing climate-related
+        diseases through data-driven insights.
+      </p>
+    </div>
+    <div class="sdg-card">
+      <img
+        src="https://plus.unsplash.com/premium_photo-1683121758343-8da46d7b2c9e?ixlib=rb-4.1.0&ixid=M3wxMjA3fDB8MHxwaG90by1wYWdlfHx8fGVufDB8fHx8fA%3D%3D&auto=format&fit=crop&q=80&w=1170"
+        alt="SDG 13 - Climate Action"
+      />
+      <h3>SDG 13: Climate Action</h3>
+      <p>
+        Our research promotes awareness and proactive strategies to combat the
+        health impacts of climate change.
+      </p>
+    </div>
+  </div>
+</section>
+
+<!-- Footer -->
+<div class="footer-frame">
+  <div class="border-line top-line"></div>
+  <div class="border-line right-line"></div>
+  <div class="border-line bottom-line"></div>
+  <div class="border-line left-line"></div>
+
+  <footer>
+    <p>© 2025 Weather Disease Predictor | All Rights Reserved</p>
+  </footer>
+</div>
+{% endblock %}

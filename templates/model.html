@@ -1,0 +1,128 @@
+{% extends 'base.html' %} {% block content %}
+<link rel="stylesheet" href="{{ url_for('static', filename='model.css') }}" />
+<div class="form-container">
+  <h1>Disease Prediction Form</h1>
+  <form method="POST" action="/predict">
+    <!-- Age and Gender -->
+    <div class="row">
+      <div class="input-group">
+        <label for="age">Age:</label>
+        <input type="number" id="age" name="age" required />
+      </div>
+      <div class="input-group">
+        <label for="gender">Gender:</label>
+        <select id="gender" name="gender" required>
+          <option value="">Select</option>
+          <option value="male">Male</option>
+          <option value="female">Female</option>
+        </select>
+      </div>
+    </div>
+
+    <div class="input-group">
+      <label for="state">Select Your State (India/Asia): <span style="color: #888; font-size: 0.85em;">(Optional)</span></label>
+      <select id="state" name="state">
+        <option value="">Select State (Optional)</option>
+        <option value="Punjab">Punjab</option>
+        <option value="Delhi">Delhi</option>
+        <option value="Maharashtra">Maharashtra</option>
+        <option value="Karnataka">Karnataka</option>
+        <option value="Tamil Nadu">Tamil Nadu</option>
+        <option value="West Bengal">West Bengal</option>
+        <option value="Uttar Pradesh">Uttar Pradesh</option>
+        <option value="Bihar">Bihar</option>
+        <option value="Kerala">Kerala</option>
+        <option value="Rajasthan">Rajasthan</option>
+        <option value="Gujarat">Gujarat</option>
+        <option value="Indonesia">Indonesia</option>
+        <option value="Singapore">Singapore</option>
+        <option value="Thailand">Thailand</option>
+        <option value="Bangladesh">Bangladesh</option>
+      </select>
+    </div>
+
+    <!-- Environmental Inputs -->
+    <div class="row">
+      <div class="input-group">
+        <label for="temperature">Temperature (°C):</label>
+        <input
+          type="number"
+          step="0.1"
+          id="temperature"
+          name="temperature"
+          required
+        />
+      </div>
+      <div class="input-group">
+        <label for="humidity">Humidity (%):</label>
+        <input
+          type="number"
+          step="0.1"
+          id="humidity"
+          name="humidity"
+          required
+        />
+      </div>
+      <div class="input-group">
+        <label for="wind_speed">Wind Speed (km/h):</label>
+        <input
+          type="number"
+          step="0.1"
+          id="wind_speed"
+          name="wind_speed"
+          required
+        />
+      </div>
+    </div>
+
+    <!-- Symptoms -->
+    <fieldset>
+      <legend>Check any symptoms or conditions you have:</legend>
+      <div class="checkbox-grid">
+        {% for symptom in symptom_list %}
+        <label>
+          <input type="checkbox" name="{{ symptom }}" value="1" />
+          {{ symptom.replace('_', ' ').title() }}
+        </label>
+        {% endfor %}
+      </div>
+    </fieldset>
+
+    <button type="submit" class="submit-btn">Predict Disease</button>
+    {% if prediction_text %}
+    <div class="prediction-output">
+      {% if "ERROR" in prediction_text %}
+      <p><strong>{{ prediction_text }}</strong></p>
+      <p class="error-detail">Please correct the input fields and try again.</p>
+      {% else %}
+      <div style="text-align: center; padding: 30px 20px; background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 15px; border: 2px solid #00d9ff; margin: 20px 0;">
+        <p style="color: #ffffff; font-size: 22px; margin-bottom: 10px; line-height: 1.6;">
+          You may be facing <strong style="color: #00d9ff; font-size: 24px; font-weight: bold;">{{ prediction_data.predicted_disease }}</strong>
+        </p>
+        <p style="color: #b0b0b0; font-size: 16px; margin-top: 15px; font-style: italic;">
+          Most patients with similar symptoms experience this condition.
+        </p>
+      </div>
+      <p class="success-detail" style="text-align: center; margin-top: 20px;">
+        ⚠️ Remember, this is an automated prediction and not medical advice.<br>
+        Consult a professional healthcare provider for diagnosis.
+      </p>
+      {% endif %}
+    </div>
+    {% endif %}
+  </form>
+</div>
+
+<br /><br /><br /><br />
+
+<!-- Footer (unchanged) -->
+<div class="footer-frame">
+  <div class="border-line top-line"></div>
+  <div class="border-line right-line"></div>
+  <div class="border-line bottom-line"></div>
+  <div class="border-line left-line"></div>
+  <footer>
+    <p>© 2025 Weather Disease Predictor | All Rights Reserved</p>
+  </footer>
+</div>
+{% endblock %}
