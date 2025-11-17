@@ -1,8 +1,19 @@
 import numpy as np
-from flask import Flask, render_template, request, redirect, url_for
+from flask import Flask, render_template, request, redirect, url_for, send_file
 import pandas as pd
 import logging
 import joblib
+import os
+import google.generativeai as genai
+from typing import Optional, Dict
+from reportlab.lib.pagesizes import letter, A4
+from reportlab.lib import colors
+from reportlab.lib.styles import getSampleStyleSheet, ParagraphStyle
+from reportlab.lib.units import inch
+from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, TableStyle, PageBreak
+from reportlab.lib.enums import TA_CENTER, TA_LEFT
+from io import BytesIO
+from datetime import datetime
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
@@ -11,6 +22,19 @@ logger = logging.getLogger(__name__)
 # --- Model Files ---
 MODEL_FILE = "model.pkl"
 ENCODER_FILE = "label_encoder.pkl"
+
+# --- Gemini API Configuration ---
+# Try to get API key from environment variable, or use default
+GEMINI_API_KEY = os.getenv('GEMINI_API_KEY', 'AIzaSyD-kyo84xEDpyV08VJGrHHJ6Kn99lQlfS8')
+
+if GEMINI_API_KEY:
+    try:
+        genai.configure(api_key=GEMINI_API_KEY)
+        logger.info("Gemini API configured successfully.")
+    except Exception as e:
+        logger.warning(f"Failed to configure Gemini API: {e}")
+else:
+    logger.warning("GEMINI_API_KEY not found. AI information feature will be disabled.")
 
 # Feature columns in EXACT order as training data (from CSV)
 FEATURE_COLUMNS = [
@@ -50,8 +74,124 @@ try:
 except FileNotFoundError as e:
     logger.error(f"Error loading ML files: {e}. Ensure {MODEL_FILE} and {ENCODER_FILE} are in the same directory.")
 
+# --- Gemini AI Helper Function ---
+def get_disease_info(disease_name: str) -> Optional[Dict[str, str]]:
+    """
+    Get AI-generated information about the disease using Gemini API.
+    Returns information about tests, emergency status, and symptom ranges.
+    """
+    if not GEMINI_API_KEY:
+        return None
+    
+    try:
+        # Use available Gemini models (try latest versions first)
+        model = None
+        model_names = [
+            'gemini-2.5-flash',
+            'gemini-2.5-pro',
+            'gemini-flash-latest',
+            'gemini-pro-latest',
+            'gemini-2.0-flash'
+        ]
+        
+        for model_name in model_names:
+            try:
+                model = genai.GenerativeModel(model_name)
+                # Test if model works
+                test_response = model.generate_content("test")
+                logger.info(f"Using model: {model_name}")
+                break
+            except Exception as e:
+                logger.debug(f"Model {model_name} failed: {e}")
+                continue
+        
+        if model is None:
+            raise Exception("No available Gemini model found")
+        
+        prompt = f"""Provide concise medical information about {disease_name}. Format your response EXACTLY as follows:
+
+**Recommended Tests:**
+[List 2-3 key diagnostic tests like blood tests, imaging, etc. Keep it simple and brief - 2-3 sentences max]
+
+**Medical Emergency:**
+[State clearly Yes or No, and briefly explain why - 2-3 sentences max]
+
+**Common Symptoms:**
+[List 3-4 most common symptoms with brief descriptions - keep it simple and easy to understand - 3-4 sentences max]
+
+Keep each section brief and clear."""
+        
+        response = model.generate_content(prompt)
+        ai_info = response.text
+        
+        # Parse the response into structured format
+        info_dict = {
+            'full_response': ai_info,
+            'tests': '',
+            'emergency': '',
+            'symptoms': ''
+        }
+        
+        # Improved parsing - look for section headers
+        text = ai_info
+        
+        # Extract Recommended Tests
+        if '**Recommended Tests:**' in text or 'Recommended Tests:' in text:
+            start_markers = ['**Recommended Tests:**', 'Recommended Tests:']
+            end_markers = ['**Medical Emergency:**', 'Medical Emergency:', '**Common Symptoms:**', 'Common Symptoms:']
+            
+            for start in start_markers:
+                if start in text:
+                    start_idx = text.find(start) + len(start)
+                    end_idx = len(text)
+                    for end in end_markers:
+                        if end in text and text.find(end) > start_idx:
+                            end_idx = min(end_idx, text.find(end))
+                    info_dict['tests'] = text[start_idx:end_idx].strip()
+                    break
+        
+        # Extract Medical Emergency
+        if '**Medical Emergency:**' in text or 'Medical Emergency:' in text:
+            start_markers = ['**Medical Emergency:**', 'Medical Emergency:']
+            end_markers = ['**Common Symptoms:**', 'Common Symptoms:', '**Recommended Tests:**', 'Recommended Tests:']
+            
+            for start in start_markers:
+                if start in text:
+                    start_idx = text.find(start) + len(start)
+                    end_idx = len(text)
+                    for end in end_markers:
+                        if end in text and text.find(end) > start_idx:
+                            end_idx = min(end_idx, text.find(end))
+                    info_dict['emergency'] = text[start_idx:end_idx].strip()
+                    break
+        
+        # Extract Common Symptoms
+        if '**Common Symptoms:**' in text or 'Common Symptoms:' in text:
+            start_markers = ['**Common Symptoms:**', 'Common Symptoms:']
+            start_idx = 0
+            for start in start_markers:
+                if start in text:
+                    start_idx = text.find(start) + len(start)
+                    break
+            info_dict['symptoms'] = text[start_idx:].strip()
+        
+        # Clean up extracted text (remove markdown, extra whitespace)
+        for key in ['tests', 'emergency', 'symptoms']:
+            if info_dict[key]:
+                # Remove markdown formatting
+                info_dict[key] = info_dict[key].replace('**', '').replace('*', '').strip()
+                # Remove extra newlines
+                info_dict[key] = ' '.join(info_dict[key].split())
+        
+        return info_dict
+        
+    except Exception as e:
+        logger.error(f"Error getting AI information: {e}")
+        return None
+
 # --- Flask App Setup ---
 app = Flask(__name__, static_folder='static')
+app.secret_key = os.urandom(24)  # Required for session
 
 @app.route('/')
 def about():
@@ -141,14 +281,22 @@ def predict():
                 predicted_idx = prediction_encoded[0]
                 confidence = float(probabilities[predicted_idx]) * 100
                 
+                # Get AI information about the disease
+                ai_info = get_disease_info(predicted_disease)
+                
                 prediction_data = {
-                    'predicted_disease': predicted_disease
+                    'predicted_disease': predicted_disease,
+                    'ai_info': ai_info
                 }
                 
                 prediction_text = f"You may be facing {predicted_disease}"
             else:
+                # Get AI information about the disease
+                ai_info = get_disease_info(predicted_disease)
+                
                 prediction_data = {
-                    'predicted_disease': predicted_disease
+                    'predicted_disease': predicted_disease,
+                    'ai_info': ai_info
                 }
                 prediction_text = f"You may be facing {predicted_disease}"
             
@@ -160,6 +308,18 @@ def predict():
     else:
         prediction_text = "ERROR: Machine Learning model files are not loaded correctly on the server."
         prediction_data = None
+
+    # Store prediction data in session for PDF generation
+    from flask import session
+    session['prediction_data'] = prediction_data
+    session['input_data'] = {
+        'age': data.get('age'),
+        'gender': data.get('gender'),
+        'temperature': data.get('temperature'),
+        'humidity': data.get('humidity'),
+        'wind_speed': data.get('wind_speed'),
+        'symptoms': [s for s in SYMPTOM_FEATURES if data.get(s) == '1']
+    }
 
     return render_template('model.html', 
                          prediction_text=prediction_text, 
@@ -181,5 +341,301 @@ def touch():
 @app.route('/contact')
 def thanks():
     return render_template('contact.html')
+
+@app.route('/generate_pdf')
+def generate_pdf():
+    """Generate PDF report with prediction details"""
+    from flask import session
+    
+    prediction_data = session.get('prediction_data')
+    input_data = session.get('input_data')
+    
+    if not prediction_data or not input_data:
+        return redirect(url_for('model_page'))
+    
+    # Create PDF in memory
+    buffer = BytesIO()
+    doc = SimpleDocTemplate(buffer, pagesize=letter,
+                            rightMargin=50, leftMargin=50,
+                            topMargin=60, bottomMargin=50)
+    
+    # Container for the 'Flowable' objects
+    elements = []
+    
+    # Define styles
+    styles = getSampleStyleSheet()
+    
+    # Title style with gradient effect
+    title_style = ParagraphStyle(
+        'CustomTitle',
+        parent=styles['Heading1'],
+        fontSize=28,
+        textColor=colors.HexColor('#00d9ff'),
+        spaceAfter=20,
+        alignment=TA_CENTER,
+        fontName='Helvetica-Bold'
+    )
+    
+    # Heading style
+    heading_style = ParagraphStyle(
+        'CustomHeading',
+        parent=styles['Heading2'],
+        fontSize=18,
+        textColor=colors.HexColor('#8b5cf6'),
+        spaceAfter=15,
+        spaceBefore=20,
+        fontName='Helvetica-Bold'
+    )
+    
+    # Subheading style
+    subheading_style = ParagraphStyle(
+        'CustomSubHeading',
+        parent=styles['Heading3'],
+        fontSize=14,
+        textColor=colors.HexColor('#4ecdc4'),
+        spaceAfter=10,
+        spaceBefore=12,
+        fontName='Helvetica-Bold'
+    )
+    
+    # Info text style
+    info_style = ParagraphStyle(
+        'InfoText',
+        parent=styles['Normal'],
+        fontSize=11,
+        textColor=colors.HexColor('#333333'),
+        spaceAfter=8,
+        leading=16
+    )
+    
+    # Title
+    elements.append(Paragraph("Disease Prediction Report", title_style))
+    elements.append(Spacer(1, 0.15*inch))
+    
+    # Date
+    date_str = datetime.now().strftime("%B %d, %Y at %I:%M %p")
+    date_para = Paragraph(f"<b>Generated on:</b> {date_str}", 
+                         ParagraphStyle('Date', parent=styles['Normal'], fontSize=10, 
+                                       textColor=colors.HexColor('#666666'), alignment=TA_CENTER))
+    elements.append(date_para)
+    elements.append(Spacer(1, 0.4*inch))
+    
+    # Prediction Result - Highlighted Box
+    disease_name = prediction_data.get('predicted_disease', 'N/A')
+    if disease_name and disease_name != 'N/A':
+        prediction_box_data = [
+            [Paragraph('<b>Predicted Disease</b>', ParagraphStyle('PredLabel', parent=styles['Normal'], 
+                                                                    fontSize=12, textColor=colors.whitesmoke, 
+                                                                    fontName='Helvetica-Bold', alignment=TA_CENTER)),
+             Paragraph(f'<b>{disease_name}</b>', ParagraphStyle('PredValue', parent=styles['Normal'], 
+                                                                 fontSize=16, textColor=colors.whitesmoke, 
+                                                                 fontName='Helvetica-Bold', alignment=TA_CENTER))]
+        ]
+        prediction_table = Table(prediction_box_data, colWidths=[2.5*inch, 3.5*inch])
+        prediction_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (0, 0), colors.HexColor('#8b5cf6')),
+            ('BACKGROUND', (1, 0), (1, 0), colors.HexColor('#00d9ff')),
+            ('TEXTCOLOR', (0, 0), (-1, -1), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'CENTER'),
+            ('VALIGN', (0, 0), (-1, -1), 'MIDDLE'),
+            ('GRID', (0, 0), (-1, -1), 2, colors.HexColor('#00d9ff')),
+            ('LEFTPADDING', (0, 0), (-1, -1), 15),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 15),
+            ('TOPPADDING', (0, 0), (-1, -1), 15),
+            ('BOTTOMPADDING', (0, 0), (-1, -1), 15),
+        ]))
+        elements.append(prediction_table)
+        elements.append(Spacer(1, 0.4*inch))
+    
+    # Input Variables - Improved Table
+    elements.append(Paragraph("Input Variables", heading_style))
+    
+    # Ensure age is properly retrieved - handle all cases
+    age_value = input_data.get('age')
+    if age_value is None or age_value == '' or str(age_value).strip() == '':
+        age_value = 'N/A'
+    else:
+        age_value = str(age_value).strip()
+    
+    # Ensure all values are properly formatted
+    gender_value = str(input_data.get('gender', 'N/A')).strip()
+    if gender_value == '':
+        gender_value = 'N/A'
+    else:
+        gender_value = gender_value.title()
+    
+    temp_value = str(input_data.get('temperature', 'N/A')).strip()
+    if temp_value == '':
+        temp_value = 'N/A'
+    
+    humidity_value = str(input_data.get('humidity', 'N/A')).strip()
+    if humidity_value == '':
+        humidity_value = 'N/A'
+    
+    wind_value = str(input_data.get('wind_speed', 'N/A')).strip()
+    if wind_value == '':
+        wind_value = 'N/A'
+    
+    input_table_data = [
+        ['Variable', 'Value'],
+        ['Age', age_value],
+        ['Gender', gender_value],
+        ['Temperature (°C)', temp_value],
+        ['Humidity (%)', humidity_value],
+        ['Wind Speed (km/h)', wind_value],
+    ]
+    
+    input_table = Table(input_table_data, colWidths=[2.8*inch, 3.2*inch])
+    input_table.setStyle(TableStyle([
+        ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#00d9ff')),
+        ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+        ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+        ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+        ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+        ('FONTSIZE', (0, 0), (-1, 0), 12),
+        ('FONTSIZE', (0, 1), (-1, -1), 11),
+        ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+        ('TOPPADDING', (0, 0), (-1, 0), 12),
+        ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+        ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
+        ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc')),
+        ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fafafa')]),
+        ('LEFTPADDING', (0, 0), (-1, -1), 12),
+        ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+        ('TOPPADDING', (0, 1), (-1, -1), 10),
+        ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+    ]))
+    elements.append(input_table)
+    elements.append(Spacer(1, 0.3*inch))
+    
+    # Symptoms - Table Format
+    symptoms = input_data.get('symptoms', [])
+    if symptoms:
+        elements.append(Paragraph("Selected Symptoms", heading_style))
+        symptom_list = [s.replace('_', ' ').title() for s in symptoms]
+        # Create a table for symptoms
+        symptom_table_data = [['Symptom']]
+        for symptom in symptom_list:
+            symptom_table_data.append([symptom])
+        
+        symptom_table = Table(symptom_table_data, colWidths=[6*inch])
+        symptom_table.setStyle(TableStyle([
+            ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#8b5cf6')),
+            ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+            ('ALIGN', (0, 0), (-1, -1), 'LEFT'),
+            ('FONTNAME', (0, 0), (-1, 0), 'Helvetica-Bold'),
+            ('FONTSIZE', (0, 0), (-1, 0), 12),
+            ('FONTSIZE', (0, 1), (-1, -1), 11),
+            ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+            ('TOPPADDING', (0, 0), (-1, 0), 12),
+            ('BACKGROUND', (0, 1), (-1, -1), colors.HexColor('#f5f5f5')),
+            ('TEXTCOLOR', (0, 1), (-1, -1), colors.HexColor('#333333')),
+            ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc')),
+            ('ROWBACKGROUNDS', (0, 1), (-1, -1), [colors.white, colors.HexColor('#fafafa')]),
+            ('LEFTPADDING', (0, 0), (-1, -1), 12),
+            ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+            ('TOPPADDING', (0, 1), (-1, -1), 10),
+            ('BOTTOMPADDING', (0, 1), (-1, -1), 10),
+        ]))
+        elements.append(symptom_table)
+        elements.append(Spacer(1, 0.4*inch))
+    
+    # AI Information - Table Format with Proper Text Wrapping
+    ai_info = prediction_data.get('ai_info')
+    if ai_info:
+        elements.append(Paragraph("AI-Generated Information", heading_style))
+        
+        ai_table_data = []
+        
+        # Create text style for wrapping
+        ai_text_style = ParagraphStyle(
+            'AIText',
+            parent=styles['Normal'],
+            fontSize=10,
+            textColor=colors.HexColor('#333333'),
+            leading=14,
+            alignment=TA_LEFT
+        )
+        
+        category_style = ParagraphStyle(
+            'AICategory',
+            parent=styles['Normal'],
+            fontSize=11,
+            textColor=colors.HexColor('#2e7d32'),
+            fontName='Helvetica-Bold',
+            alignment=TA_LEFT
+        )
+        
+        if ai_info.get('tests'):
+            ai_table_data.append([
+                Paragraph('🔬 <b>Recommended Tests</b>', category_style),
+                Paragraph(ai_info['tests'], ai_text_style)
+            ])
+        
+        if ai_info.get('emergency'):
+            ai_table_data.append([
+                Paragraph('🚨 <b>Medical Emergency Status</b>', category_style),
+                Paragraph(ai_info['emergency'], ai_text_style)
+            ])
+        
+        if ai_info.get('symptoms'):
+            ai_table_data.append([
+                Paragraph('📊 <b>Common Symptoms</b>', category_style),
+                Paragraph(ai_info['symptoms'], ai_text_style)
+            ])
+        
+        if ai_info.get('full_response') and not any([ai_info.get('tests'), ai_info.get('emergency'), ai_info.get('symptoms')]):
+            ai_table_data.append([
+                Paragraph('📋 <b>Additional Information</b>', category_style),
+                Paragraph(ai_info['full_response'], ai_text_style)
+            ])
+        
+        if ai_table_data:
+            # Add header
+            header_style = ParagraphStyle(
+                'AIHeader',
+                parent=styles['Normal'],
+                fontSize=12,
+                textColor=colors.whitesmoke,
+                fontName='Helvetica-Bold',
+                alignment=TA_CENTER
+            )
+            ai_table_data.insert(0, [
+                Paragraph('<b>Category</b>', header_style),
+                Paragraph('<b>Information</b>', header_style)
+            ])
+            
+            ai_table = Table(ai_table_data, colWidths=[2.2*inch, 3.8*inch])
+            ai_table.setStyle(TableStyle([
+                ('BACKGROUND', (0, 0), (-1, 0), colors.HexColor('#4ecdc4')),
+                ('TEXTCOLOR', (0, 0), (-1, 0), colors.whitesmoke),
+                ('ALIGN', (0, 0), (0, -1), 'LEFT'),
+                ('ALIGN', (1, 0), (1, -1), 'LEFT'),
+                ('VALIGN', (0, 0), (-1, -1), 'TOP'),
+                ('FONTSIZE', (0, 0), (-1, 0), 12),
+                ('BOTTOMPADDING', (0, 0), (-1, 0), 12),
+                ('TOPPADDING', (0, 0), (-1, 0), 12),
+                ('BACKGROUND', (0, 1), (0, -1), colors.HexColor('#e8f5e9')),
+                ('BACKGROUND', (1, 1), (1, -1), colors.white),
+                ('GRID', (0, 0), (-1, -1), 1, colors.HexColor('#cccccc')),
+                ('LEFTPADDING', (0, 0), (-1, -1), 12),
+                ('RIGHTPADDING', (0, 0), (-1, -1), 12),
+                ('TOPPADDING', (0, 1), (-1, -1), 15),
+                ('BOTTOMPADDING', (0, 1), (-1, -1), 15),
+            ]))
+            elements.append(ai_table)
+            elements.append(Spacer(1, 0.3*inch))
+    
+    # Build PDF
+    doc.build(elements)
+    
+    # Get PDF data
+    buffer.seek(0)
+    
+    # Generate filename
+    filename = f"disease_prediction_report_{datetime.now().strftime('%Y%m%d_%H%M%S')}.pdf"
+    
+    return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
+
 if __name__ == '__main__':
     app.run(debug=True)

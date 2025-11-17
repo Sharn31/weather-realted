@@ -95,14 +95,67 @@
       <p><strong>{{ prediction_text }}</strong></p>
       <p class="error-detail">Please correct the input fields and try again.</p>
       {% else %}
-      <div style="text-align: center; padding: 30px 20px; background: linear-gradient(135deg, rgba(0, 217, 255, 0.1), rgba(139, 92, 246, 0.1)); border-radius: 15px; border: 2px solid #00d9ff; margin: 20px 0;">
-        <p style="color: #ffffff; font-size: 22px; margin-bottom: 10px; line-height: 1.6;">
-          You may be facing <strong style="color: #00d9ff; font-size: 24px; font-weight: bold;">{{ prediction_data.predicted_disease }}</strong>
-        </p>
-        <p style="color: #b0b0b0; font-size: 16px; margin-top: 15px; font-style: italic;">
-          Most patients with similar symptoms experience this condition.
-        </p>
+      <div class="prediction-container">
+        <!-- Left side: Get Reports Button -->
+        <div class="report-button-wrapper">
+          <a href="/generate_pdf" class="report-button">
+            <span class="report-icon">📄</span>
+            <span class="report-text">Get Reports</span>
+            <div class="button-shine"></div>
+          </a>
+        </div>
+        
+        <!-- Right side: Prediction Box -->
+        <div class="prediction-box">
+          <div class="prediction-glow"></div>
+          <div class="prediction-content">
+            <p class="prediction-main-text">
+              You may be facing <strong class="disease-name">{{ prediction_data.predicted_disease }}</strong>
+            </p>
+            <p class="prediction-sub-text">
+              Most patients with similar symptoms experience this condition.
+            </p>
+          </div>
+        </div>
       </div>
+      
+      {% if prediction_data and prediction_data.ai_info %}
+      <div class="ai-info-container">
+        <h3 class="ai-info-title">📋 Additional Information</h3>
+        
+        {% if prediction_data.ai_info.tests %}
+        <div class="ai-info-card">
+          <h4 class="ai-info-heading tests-heading">🔬 Recommended Tests</h4>
+          <p class="ai-info-text">{{ prediction_data.ai_info.tests }}</p>
+        </div>
+        {% endif %}
+        
+        {% if prediction_data.ai_info.emergency %}
+        <div class="ai-info-card">
+          <h4 class="ai-info-heading emergency-heading">🚨 Medical Emergency</h4>
+          <p class="ai-info-text">{{ prediction_data.ai_info.emergency }}</p>
+        </div>
+        {% endif %}
+        
+        {% if prediction_data.ai_info.symptoms %}
+        <div class="ai-info-card">
+          <h4 class="ai-info-heading symptoms-heading">📊 Common Symptoms</h4>
+          <p class="ai-info-text">{{ prediction_data.ai_info.symptoms }}</p>
+        </div>
+        {% endif %}
+        
+        {% if prediction_data.ai_info.full_response and not prediction_data.ai_info.tests and not prediction_data.ai_info.emergency and not prediction_data.ai_info.symptoms %}
+        <div class="ai-info-card">
+          <p class="ai-info-text">{{ prediction_data.ai_info.full_response }}</p>
+        </div>
+        {% endif %}
+      </div>
+      {% elif prediction_data and not prediction_data.ai_info %}
+      <div class="ai-info-warning">
+        <p>⚠️ AI information is currently unavailable. Please check API configuration.</p>
+      </div>
+      {% endif %}
+      
       <p class="success-detail" style="text-align: center; margin-top: 20px;">
         ⚠️ Remember, this is an automated prediction and not medical advice.<br>
         Consult a professional healthcare provider for diagnosis.
