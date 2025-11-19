@@ -15,6 +15,11 @@ from reportlab.platypus import SimpleDocTemplate, Paragraph, Spacer, Table, Tabl
 from reportlab.lib.enums import TA_CENTER, TA_LEFT
 from io import BytesIO
 from datetime import datetime
+from supabase import create_client, Client
+from dotenv import load_dotenv
+
+# Load environment variables from .env file
+load_dotenv()
 
 # --- Logging Setup ---
 logging.basicConfig(level=logging.INFO)
@@ -36,6 +41,23 @@ if GEMINI_API_KEY:
         logger.warning(f"Failed to configure Gemini API: {e}")
 else:
     logger.warning("GEMINI_API_KEY not found. AI information feature will be disabled.")
+
+# --- Supabase Configuration ---
+SUPABASE_URL = os.getenv('SUPABASE_URL', '')
+SUPABASE_KEY = os.getenv('SUPABASE_KEY', '')
+supabase: Optional[Client] = None
+
+if SUPABASE_URL and SUPABASE_KEY:
+    try:
+        supabase = create_client(SUPABASE_URL, SUPABASE_KEY)
+        logger.info(f"Supabase client configured successfully. URL: {SUPABASE_URL[:30]}...")
+    except Exception as e:
+        logger.error(f"Failed to configure Supabase client: {e}", exc_info=True)
+        supabase = None
+else:
+    logger.warning("SUPABASE_URL or SUPABASE_KEY not found. Contact form data will not be saved to Supabase.")
+    logger.warning(f"SUPABASE_URL: {SUPABASE_URL if SUPABASE_URL else 'NOT SET'}")
+    logger.warning(f"SUPABASE_KEY: {'SET' if SUPABASE_KEY else 'NOT SET'}")
 
 # Feature columns in EXACT order as training data (from CSV)
 FEATURE_COLUMNS = [
@@ -386,6 +408,32 @@ def touch():
         }
         logger.info(f"Received valid form data: {form_data}")
         
+        # Save to Supabase if configured
+        if supabase:
+            try:
+                # Insert data into Supabase table (table name: 'contact_submissions')
+                data_to_insert = {
+                    'name': name,
+                    'email': email,
+                    'message_type': message_type,
+                    'message': message,
+                    'submitted_at': datetime.utcnow().isoformat()
+                }
+                logger.info(f"Attempting to save to Supabase: {data_to_insert}")
+                
+                response = supabase.table('contact_submissions').insert(data_to_insert).execute()
+                
+                if response.data:
+                    logger.info(f"Successfully saved contact form data to Supabase. Response: {response.data}")
+                else:
+                    logger.warning(f"Supabase insert completed but no data returned. Response: {response}")
+            except Exception as e:
+                logger.error(f"Failed to save contact form data to Supabase: {e}", exc_info=True)
+                # Continue even if Supabase save fails - don't break the user experience
+        else:
+            logger.warning("Supabase not configured. Contact form data not saved to database.")
+            logger.warning(f"SUPABASE_URL: {'Set' if SUPABASE_URL else 'Not set'}, SUPABASE_KEY: {'Set' if SUPABASE_KEY else 'Not set'}")
+        
         return redirect(url_for('touch', success='true'))
     
     return render_template("contact.html")
@@ -393,6 +441,36 @@ def touch():
 @app.route('/contact')
 def thanks():
     return render_template('contact.html')
+
+@app.route('/test-supabase')
+def test_supabase():
+    """Test route to verify Supabase connection"""
+    result = {
+        'supabase_configured': supabase is not None,
+        'supabase_url_set': bool(SUPABASE_URL),
+        'supabase_key_set': bool(SUPABASE_KEY),
+        'connection_status': 'unknown'
+    }
+    
+    if supabase:
+        try:
+            # Try a simple query to test connection
+            test_response = supabase.table('contact_submissions').select('id').limit(1).execute()
+            result['connection_status'] = 'success'
+            result['message'] = 'Supabase connection is working!'
+            result['test_response'] = str(test_response.data) if hasattr(test_response, 'data') else 'No data'
+        except Exception as e:
+            result['connection_status'] = 'error'
+            result['error'] = str(e)
+            result['message'] = f'Supabase connection failed: {e}'
+    else:
+        result['message'] = 'Supabase is not configured. Check environment variables.'
+    
+    return f"""
+    <h2>Supabase Connection Test</h2>
+    <pre>{result}</pre>
+    <p><a href="/touch">Back to Contact Form</a></p>
+    """
 
 @app.route('/generate_pdf')
 def generate_pdf():
