@@ -4,6 +4,7 @@ import pandas as pd
 import logging
 import joblib
 import os
+import re
 import google.generativeai as genai
 from typing import Optional, Dict
 from reportlab.lib.pagesizes import letter, A4
@@ -333,9 +334,60 @@ def visualize():
 @app.route('/touch', methods=["GET", "POST"])
 def touch():
     if request.method == "POST":
-        # In this simplified version, just log data instead of sending to Supabase
-        logger.info(f"Received form data: {dict(request.form)}")
-        return redirect(url_for('thanks'))
+        # Get form data
+        name = request.form.get('name', '').strip()
+        email = request.form.get('email', '').strip()
+        message_type = request.form.get('message_type', '').strip()
+        message = request.form.get('message', '').strip()
+        
+        # Validation errors list
+        errors = []
+        
+        # Validate name
+        if not name:
+            errors.append("Name is required.")
+        elif len(name) < 2 or len(name) > 100:
+            errors.append("Name must be between 2 and 100 characters.")
+        elif not name.replace(' ', '').isalpha():
+            errors.append("Name should only contain letters and spaces.")
+        
+        # Validate email
+        if not email:
+            errors.append("Email is required.")
+        elif len(email) > 255:
+            errors.append("Email is too long.")
+        else:
+            email_pattern = r'^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$'
+            if not re.match(email_pattern, email):
+                errors.append("Please enter a valid email address.")
+        
+        # Validate message type
+        valid_message_types = ['query', 'suggestion', 'complaint', 'compliment']
+        if not message_type:
+            errors.append("Message type is required.")
+        elif message_type not in valid_message_types:
+            errors.append("Invalid message type selected.")
+        
+        # Validate message
+        if not message:
+            errors.append("Message is required.")
+        elif len(message) < 10 or len(message) > 1000:
+            errors.append("Message must be between 10 and 1000 characters.")
+        
+        if errors:
+            return render_template("contact.html", errors=errors, 
+                                 name=name, email=email, message_type=message_type, message=message)
+        
+        form_data = {
+            'name': name,
+            'email': email,
+            'message_type': message_type,
+            'message': message
+        }
+        logger.info(f"Received valid form data: {form_data}")
+        
+        return redirect(url_for('touch', success='true'))
+    
     return render_template("contact.html")
 
 @app.route('/contact')

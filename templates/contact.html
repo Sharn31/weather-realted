@@ -1,15 +1,469 @@
 {% extends 'base.html' %}
 {% block content %}
-<h2>Get in Touch</h2>
-<form>
-  <div class="mb-3">
-    <label>Name</label>
-    <input type="text" class="form-control" placeholder="Your name">
+<link rel="stylesheet" href="{{ url_for('static', filename='touch.css') }}">
+<div class="touch-container">
+  <h2 class="touch-heading">Get in Touch</h2>
+  <p class="touch-description">We'd love to hear from you! Please fill out the form below.</p>
+  
+  {% if errors %}
+  <div class="alert alert-danger" role="alert">
+    <strong>Please fix the following errors:</strong>
+    <ul class="mb-0 mt-2">
+      {% for error in errors %}
+      <li>{{ error }}</li>
+      {% endfor %}
+    </ul>
   </div>
+  {% endif %}
+  
+  <form class="touch-form" method="POST" action="{{ url_for('touch') }}" id="contactForm" novalidate>
+    <div class="form-row-container">
+      <div class="form-left-column">
+        <div class="mb-3">
+          <label for="name" class="form-label">Name <span class="text-danger">*</span></label>
+          <input 
+            type="text" 
+            class="form-control {% if errors and not name %}is-invalid{% elif name %}is-valid{% endif %}" 
+            id="name" 
+            name="name" 
+            value="{{ name if name else '' }}"
+            placeholder="Your name" 
+            required
+            minlength="2"
+            maxlength="100"
+            pattern="[A-Za-z\s]+"
+            title="Name should only contain letters and spaces"
+          >
+          <div class="invalid-feedback">Please enter a valid name (at least 2 characters, letters only).</div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="email" class="form-label">Email <span class="text-danger">*</span></label>
+          <input 
+            type="email" 
+            class="form-control {% if errors and not email %}is-invalid{% elif email %}is-valid{% endif %}" 
+            id="email" 
+            name="email" 
+            value="{{ email if email else '' }}"
+            placeholder="your.email@example.com" 
+            required
+            pattern="[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}"
+            title="Please enter a valid email address"
+          >
+          <div class="invalid-feedback">Please enter a valid email address.</div>
+        </div>
+        
+        <div class="mb-3">
+          <label for="message_type" class="form-label">Type of Message <span class="text-danger">*</span></label>
+          <select 
+            class="form-control {% if errors and not message_type %}is-invalid{% elif message_type %}is-valid{% endif %}" 
+            id="message_type" 
+            name="message_type" 
+            required
+          >
+            <option value="">Select message type...</option>
+            <option value="query" {% if message_type == 'query' %}selected{% endif %}>Query</option>
+            <option value="suggestion" {% if message_type == 'suggestion' %}selected{% endif %}>Suggestion</option>
+            <option value="complaint" {% if message_type == 'complaint' %}selected{% endif %}>Complaint</option>
+            <option value="compliment" {% if message_type == 'compliment' %}selected{% endif %}>Compliment</option>
+          </select>
+          <div class="invalid-feedback">Please select a message type.</div>
+        </div>
+      </div>
+      
+      <div class="form-right-column">
   <div class="mb-3">
-    <label>Message</label>
-    <textarea class="form-control" rows="3"></textarea>
+          <label for="message" class="form-label">Message <span class="text-danger">*</span></label>
+          <textarea 
+            class="form-control {% if errors and not message %}is-invalid{% elif message %}is-valid{% endif %}" 
+            id="message" 
+            name="message" 
+            rows="10" 
+            placeholder="Your message here..." 
+            required
+            minlength="10"
+            maxlength="1000"
+          >{{ message if message else '' }}</textarea>
+          <div class="invalid-feedback">Please enter a message (at least 10 characters).</div>
+          <small class="form-text text-muted">Minimum 10 characters, maximum 1000 characters.</small>
+        </div>
+      </div>
+    </div>
+    
+    <div class="form-submit-container">
+      <button type="submit" class="btn btn-primary">Send</button>
+    </div>
+  </form>
+</div>
+
+<!-- Footer -->
+<div class="footer-frame">
+  <div class="border-line top-line"></div>
+  <div class="border-line right-line"></div>
+  <div class="border-line bottom-line"></div>
+  <div class="border-line left-line"></div>
+
+  <footer>
+    <p>© 2025 Weather Disease Predictor | All Rights Reserved</p>
+  </footer>
+</div>
+
+<!-- Thank You Modal Overlay -->
+<div id="thankYouModal" class="modal-overlay">
+  <div class="modal-content">
+    <div class="modal-header">
+      <h3 class="modal-title">Thank You!</h3>
+    </div>
+    <div class="modal-body">
+      <p>Thanks for getting in touch with us, your response has been submitted with us.</p>
+    </div>
+    <div class="modal-footer">
+      <button type="button" class="btn btn-primary" onclick="closeThankYouModal()">Close</button>
+    </div>
   </div>
-  <button type="submit" class="btn btn-primary">Send</button>
-</form>
+</div>
+
+<script>
+  // Modal functions - must be defined globally
+  function showThankYouModal() {
+    const modal = document.getElementById('thankYouModal');
+    console.log('showThankYouModal called, modal element:', modal);
+    if (modal) {
+      console.log('Adding show class to modal');
+      modal.classList.add('show');
+      document.body.style.overflow = 'hidden'; // Prevent background scrolling
+      console.log('Modal classes:', modal.className);
+    } else {
+      console.error('Modal element not found!');
+    }
+  }
+  
+  function closeThankYouModal() {
+    const modal = document.getElementById('thankYouModal');
+    if (modal) {
+      modal.classList.remove('show');
+      document.body.style.overflow = 'auto'; // Restore scrolling
+    }
+  }
+  
+  // Form validation and submission
+  (function() {
+    'use strict';
+    const form = document.getElementById('contactForm');
+    
+    if (!form) return;
+    
+    form.addEventListener('submit', function(event) {
+      if (!form.checkValidity()) {
+        event.preventDefault();
+        event.stopPropagation();
+        form.classList.add('was-validated');
+        return;
+      }
+      
+      // Allow form to submit normally - we'll check URL on page load
+      form.classList.add('was-validated');
+    }, false);
+    
+    // Real-time validation feedback
+    const inputs = form.querySelectorAll('input, select, textarea');
+    inputs.forEach(input => {
+      input.addEventListener('blur', function() {
+        if (input.checkValidity()) {
+          input.classList.remove('is-invalid');
+          input.classList.add('is-valid');
+        } else {
+          input.classList.remove('is-valid');
+          input.classList.add('is-invalid');
+        }
+      });
+      
+      input.addEventListener('input', function() {
+        if (input.classList.contains('is-invalid') && input.checkValidity()) {
+          input.classList.remove('is-invalid');
+          input.classList.add('is-valid');
+        }
+      });
+    });
+  })();
+  
+  // Close modal when clicking outside of it
+  window.addEventListener('click', function(event) {
+    const modal = document.getElementById('thankYouModal');
+    if (modal && event.target === modal) {
+      closeThankYouModal();
+    }
+  });
+  
+  // Check for success parameter in URL on page load
+  document.addEventListener('DOMContentLoaded', function() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const successParam = urlParams.get('success');
+    console.log('URL success parameter:', successParam);
+    
+    if (successParam === 'true') {
+      // Small delay to ensure modal is rendered
+      setTimeout(function() {
+        console.log('Showing thank you modal');
+        showThankYouModal();
+        // Clean up URL
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    }
+  });
+  
+  // Also check immediately if DOM is already loaded
+  if (document.readyState === 'loading') {
+    // DOM hasn't finished loading yet
+  } else {
+    // DOM is already loaded
+    const urlParams = new URLSearchParams(window.location.search);
+    if (urlParams.get('success') === 'true') {
+      setTimeout(function() {
+        showThankYouModal();
+        window.history.replaceState({}, document.title, window.location.pathname);
+      }, 100);
+    }
+  }
+</script>
+
+<style>
+  .form-label {
+    color: #ffffff;
+    font-weight: 500;
+    margin-bottom: 8px;
+    display: block;
+  }
+  
+  .text-danger {
+    color: #ff4444 !important;
+  }
+  
+  .form-control.is-invalid {
+    border-color: #dc3545;
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.5);
+  }
+  
+  .form-control.is-valid {
+    border-color: #28a745;
+    box-shadow: 0 0 15px rgba(40, 167, 69, 0.5);
+  }
+  
+  .invalid-feedback {
+    display: none;
+    color: #ff4444;
+    font-size: 14px;
+    margin-top: 5px;
+  }
+  
+  .was-validated .form-control:invalid ~ .invalid-feedback,
+  .form-control.is-invalid ~ .invalid-feedback {
+    display: block;
+  }
+  
+  .form-text {
+    color: #aaa;
+    font-size: 12px;
+    margin-top: 5px;
+  }
+  
+  .alert {
+    padding: 15px;
+    margin-bottom: 20px;
+    border-radius: 8px;
+    border: 2px solid;
+  }
+  
+  .alert-danger {
+    background-color: rgba(220, 53, 69, 0.2);
+    border-color: #dc3545;
+    color: #ff6b6b;
+    box-shadow: 0 0 15px rgba(220, 53, 69, 0.5);
+  }
+  
+  .alert-danger ul {
+    padding-left: 20px;
+  }
+  
+  .alert-danger strong {
+    color: #ff4444;
+  }
+  
+  /* Two-column layout */
+  .form-row-container {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 20px;
+    text-align: left;
+  }
+  
+  .form-left-column {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-right-column {
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-right-column .mb-3 {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+  }
+  
+  .form-right-column textarea {
+    flex: 1;
+    min-height: 100%;
+    resize: vertical;
+  }
+  
+  .form-submit-container {
+    display: flex;
+    justify-content: center;
+    margin-top: 20px;
+  }
+  
+  /* Responsive design for smaller screens */
+  @media (max-width: 768px) {
+    .form-row-container {
+      grid-template-columns: 1fr;
+      gap: 20px;
+    }
+    
+    .form-right-column textarea {
+      min-height: 200px;
+    }
+  }
+  
+  /* Modal Overlay Styles */
+  .modal-overlay {
+    display: none !important;
+    position: fixed;
+    z-index: 10000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.8);
+    backdrop-filter: blur(5px);
+    animation: fadeIn 0.3s ease;
+    justify-content: center;
+    align-items: center;
+  }
+  
+  .modal-overlay.show {
+    display: flex !important;
+  }
+  
+  .modal-content {
+    background: linear-gradient(135deg, #0b0f1d 0%, #1a1e2e 100%);
+    border: 2px solid #00d9ff;
+    border-radius: 12px;
+    padding: 0;
+    max-width: 500px;
+    width: 90%;
+    box-shadow: 0 0 30px rgba(0, 217, 255, 0.6), 0 0 60px rgba(139, 92, 246, 0.4);
+    animation: slideDown 0.3s ease;
+    position: relative;
+    overflow: hidden;
+  }
+  
+  .modal-content::before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: -100%;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(90deg, transparent, rgba(0, 217, 255, 0.1), transparent);
+    animation: shimmer 3s infinite;
+  }
+  
+  .modal-header {
+    padding: 25px 30px;
+    border-bottom: 1px solid rgba(0, 217, 255, 0.3);
+    text-align: center;
+  }
+  
+  .modal-title {
+    color: #00d9ff;
+    font-size: 28px;
+    font-weight: bold;
+    margin: 0;
+    text-shadow: 0 0 10px rgba(0, 217, 255, 0.5);
+    animation: pulseGlow 2s infinite;
+  }
+  
+  .modal-body {
+    padding: 30px;
+    text-align: center;
+  }
+  
+  .modal-body p {
+    color: #ffffff;
+    font-size: 18px;
+    line-height: 1.6;
+    margin: 0;
+  }
+  
+  .modal-footer {
+    padding: 20px 30px;
+    border-top: 1px solid rgba(0, 217, 255, 0.3);
+    text-align: center;
+  }
+  
+  .modal-footer .btn {
+    min-width: 120px;
+    padding: 12px 30px;
+    font-size: 16px;
+    font-weight: bold;
+  }
+  
+  @keyframes slideDown {
+    from {
+      transform: translateY(-50px);
+      opacity: 0;
+    }
+    to {
+      transform: translateY(0);
+      opacity: 1;
+    }
+  }
+  
+  @keyframes shimmer {
+    0% {
+      left: -100%;
+    }
+    100% {
+      left: 100%;
+    }
+  }
+  
+  /* Responsive modal */
+  @media (max-width: 768px) {
+    .modal-content {
+      max-width: 90%;
+      margin: 20px;
+    }
+    
+    .modal-header {
+      padding: 20px;
+    }
+    
+    .modal-body {
+      padding: 20px;
+    }
+    
+    .modal-body p {
+      font-size: 16px;
+    }
+    
+    .modal-footer {
+      padding: 15px 20px;
+    }
+  }
+</style>
 {% endblock %}
