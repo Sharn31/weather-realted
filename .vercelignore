@@ -1,0 +1,36 @@
+__pycache__/
+*.pyc
+*.pyo
+*.pyd
+.Python
+*.so
+*.egg
+*.egg-info
+dist/
+build/
+.env
+.venv
+venv/
+ENV/
+env/
+*.bat
+*.ps1
+*.ipynb
+*.md
+!README.md
+setup_*.bat
+setup_*.ps1
+set_*.bat
+start_*.bat
+start_*.ps1
+.git/
+.gitignore
+# Large data files - exclude CSV files used for training/analysis
+*.csv
+# Exclude standalone HTML files (templates are in templates/ folder)
+Disease_3D_Scatter.html
+tail_table.html
+# Exclude large visualization HTML files from static folder
+static/*.html
+# Keep only essential model files (model.pkl and label_encoder.pkl are needed)
+

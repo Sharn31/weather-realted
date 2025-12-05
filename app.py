@@ -6,6 +6,7 @@ import joblib
 import os
 import re
 import google.generativeai as genai
+from concurrent.futures import ThreadPoolExecutor, TimeoutError
 from typing import Optional, Dict
 from reportlab.lib.pagesizes import letter, A4
 from reportlab.lib import colors
@@ -107,21 +108,15 @@ def get_disease_info(disease_name: str) -> Optional[Dict[str, str]]:
         return None
     
     try:
-        # Use available Gemini models (try latest versions first)
+        # Use available Gemini models (try latest versions first) with a strict timeout
         model = None
         model_names = [
-            'gemini-2.5-flash',
-            'gemini-2.5-pro',
-            'gemini-flash-latest',
-            'gemini-pro-latest',
-            'gemini-2.0-flash'
+            'gemini-2.5-flash'
         ]
         
         for model_name in model_names:
             try:
                 model = genai.GenerativeModel(model_name)
-                # Test if model works
-                test_response = model.generate_content("test")
                 logger.info(f"Using model: {model_name}")
                 break
             except Exception as e:
@@ -144,7 +139,17 @@ def get_disease_info(disease_name: str) -> Optional[Dict[str, str]]:
 
 Keep each section brief and clear."""
         
-        response = model.generate_content(prompt)
+        # Run Gemini call in a separate thread and enforce a hard timeout so the UI never hangs
+        with ThreadPoolExecutor(max_workers=1) as executor:
+            future = executor.submit(model.generate_content, prompt)
+            try:
+                response = future.result(timeout=8)
+            except TimeoutError:
+                logger.warning("Gemini generate_content timed out after 8s; skipping AI info.")
+                return None
+            except Exception as e:
+                logger.error(f"Gemini generate_content failed: {e}")
+                return None
         ai_info = response.text
         
         # Parse the response into structured format
@@ -767,5 +772,7 @@ def generate_pdf():
     
     return send_file(buffer, as_attachment=True, download_name=filename, mimetype='application/pdf')
 
+# Export app for Vercel
+# Vercel will automatically detect the Flask app instance
 if __name__ == '__main__':
     app.run(debug=True)

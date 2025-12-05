@@ -62,10 +62,12 @@
     
     {% set graphs = [
     ('Climate Factor Distribution', 'climate_factors_distribution.html'),
-    ('Disease Prevalence By Temperature Range', 'Disease Prevalence by Temperature Range.html'),
+    
     ('Disease Rate by 10-year Age Group', 'Disease Rate by 10-Year Age Group.html'),
     ('Disease Rate by Age Group And Gender', 'Disease Rates by Age Group and Gender.html'),
-    ('Weather Variables Vs Disease Type', 'Disease_3D_Scatter.html')
+    ('Weather Variables Vs Disease Type', 'Disease_3D_Scatter.html'),
+    ('Confusion Matrix of Disease Prediction','Confusion_Matrix_Disease_Prediction.html')
+  
   ] %}
 
   {% for title, file in graphs %}
@@ -73,6 +75,7 @@
     <h3>{{ title }}</h3>
     <div style="text-align: center; padding: 40px; background: #1e1e1e; border-radius: 8px; border: 2px dashed #00d9ff;">
       <iframe src="{{ url_for('static', filename=file) }}" width="100%" height="600px"></iframe>
+      
     </div>
     
     <hr class="viz-divider">
